@@ -152,6 +152,14 @@ def correctFileName(verbose, program, series, episode):
 	#end if fileName
 #end correctFileName
 
+def listOf(opts, stufflist):
+    "make a string with a list of stuff.."
+    chaine = ""
+    for stuff in stufflist:
+        chaine = chaine + stuff + ", "
+    return chaine
+        
+
 def tagFile(opts, program, series, episode):
 	"""docstring for tagFile"""
 	#setup tags for the MP4Tagger function
@@ -179,17 +187,18 @@ def tagFile(opts, program, series, episode):
 	addYear = " --release_date \"%s\"" % episode.firstAired
 	addComment = " --comments \"tagged by tvtags\""
 	if len(series.actors) > 0:
-		addCast = " --cast \"%s\"" % series.actors
+	    addCast = " --cast \"%s\"" % listOf(opts, series.actors)
 	if len(episode.directors) > 0:
-		addDirectors = " --director \"%s\"" % episode.directors
+		addDirectors = " --director \"%s\"" % listOf(opts, episode.directors)
 	if len(episode.writers) > 0:
-		addScreenWriters = " --screenwriters \"%s\"" % episode.writers
+		addScreenWriters = " --screenwriters \"%s\"" % listOf(opts, episode.writers)
 	
 	#Create the command line string
-	tagCmd = "\"" + program.MP4Tagger + "\" -i \"" + episode.filePath + "/" + episode.fileName + "\"" \
-	+ addName + addArtwork + addStik + addArtist + addTitle + addAlbum + addGenre + addAlbumArtist + addDescription \
+	tagArg = addName + addArtwork + addStik + addArtist + addTitle + addAlbum + addGenre + addAlbumArtist + addDescription \
 	+ addTVNetwork + addTVShowName +  addTVSeasonNum + addTVEpisodeNum + addDisk + addTracknum \
 	+ addContentRating  + addYear + addComment + addCast + addDirectors + addScreenWriters
+	tagCmd = "\"" + program.MP4Tagger + "\" -i \"" + episode.filePath + "/" + episode.fileName + "\"" \
+	+ tagArg.encode("utf8")
 	
 	#run MP4Tagger using the arguments we have created
 	if opts.verbose > 1:
@@ -217,6 +226,13 @@ def artwork(opts, interactive, program, series):
 		for fullFileName in glob.glob(cacheDir + "/*.jpg"):
 			(fileBaseName, fileExtension) = os.path.splitext(fullFileName)
 			(filePath,fileName) = os.path.split(fileBaseName)
+			
+			print series.seriesName
+			print fileName
+			print potentialArtworkFileName
+			
+			if isinstance( potentialArtworkFileName, str ):
+				print "potentialArtworkFileName est une chaine"
 			
 			if fileName == potentialArtworkFileName:
 				if opts.verbose > 0:
@@ -284,7 +300,8 @@ def artwork(opts, interactive, program, series):
 		elif opts.verbose == 2:
 			curlVerbosity ="-v"
 		#end if verbose
-		os.popen("curl %s -o \"%s\" \"%s\"" % (curlVerbosity, artworkFullFileName, artworkUrl))
+		
+		os.popen("curl %s -o \"%s\" \"%s\"" % (curlVerbosity, artworkFullFileName.encode("utf8"), artworkUrl))
 		
 		
 		series.artworkFileName = artworkFullFileName
@@ -297,6 +314,7 @@ def artwork(opts, interactive, program, series):
 
 def getShowSpecificInfo(verbose, tvdb, seriesName, attribute):
 	"""docstring for getEpisodeSpecificInfo"""
+	print "getShowSpecificInfo %s" % attribute
 	try:
 		value = tvdb[seriesName][attribute]
 		if not value:
@@ -325,6 +343,7 @@ def getShowSpecificInfo(verbose, tvdb, seriesName, attribute):
 
 def getEpisodeSpecificInfo(verbose, program, series, episodeNumber, attribute):
 	"""docstring for getEpisodeSpecificInfo"""
+	print "getEpisodeSpecificInfo %s" % attribute
 	try:
 		value = program.tvdb[series.seriesName][series.seasonNumber][episodeNumber][attribute]
 		if not value:
@@ -365,8 +384,8 @@ def tvtags(opts, fullPath):
 	if len(filePath) == 0:
 		filePath = "."
 	
-	m1 = re.match('(\w+).+[sS]([0-9]+)[eE]([0-9]+).+', fileName)
-	m2 = re.match('(\w+).+([0-9]+)[xX]([0-9]+).+', fileName)
+	m1 = re.match('(.+).[sS]([0-9]+)[eE]([0-9]+).+', fileName)
+	m2 = re.match('(.+).([0-9]+)[xX]([0-9]+).+', fileName)
 	if m1:
 		(series, seasonNumber, episodeNumber) = m1.groups()
 	elif m2:
