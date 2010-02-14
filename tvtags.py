@@ -25,6 +25,8 @@ import re
 import glob
 import unicodedata
 import tempfile
+import urllib
+from unicodedata import normalize
 
 from optparse import OptionParser
 
@@ -194,11 +196,11 @@ def tagFile(opts, program, series, episode):
 		addScreenWriters = " --screenwriters \"%s\"" % listOf(opts, episode.writers)
 	
 	#Create the command line string
-	tagArg = addName + addArtwork + addStik + addArtist + addTitle + addAlbum + addGenre + addAlbumArtist + addDescription \
+	tagArg = addName + addStik + addArtist + addTitle + addAlbum + addGenre + addAlbumArtist + addDescription \
 	+ addTVNetwork + addTVShowName +  addTVSeasonNum + addTVEpisodeNum + addDisk + addTracknum \
 	+ addContentRating  + addYear + addComment + addCast + addDirectors + addScreenWriters
 	tagCmd = "\"" + program.MP4Tagger + "\" -i \"" + episode.filePath + "/" + episode.fileName + "\"" \
-	+ tagArg.encode("utf8")
+	+ addArtwork + tagArg.encode("utf8")
 	
 	#run MP4Tagger using the arguments we have created
 	if opts.verbose > 1:
@@ -222,17 +224,10 @@ def artwork(opts, interactive, program, series):
 		os.mkdir(cacheDir)
 	
 	try:
-		potentialArtworkFileName = series.seriesName + " Season " + str(series.seasonNumber)
+		potentialArtworkFileName = normalize('NFD',series.seriesName).encode("UTF-8") + " Season " + str(series.seasonNumber)
 		for fullFileName in glob.glob(cacheDir + "/*.jpg"):
 			(fileBaseName, fileExtension) = os.path.splitext(fullFileName)
 			(filePath,fileName) = os.path.split(fileBaseName)
-			
-			print series.seriesName
-			print fileName
-			print potentialArtworkFileName
-			
-			if isinstance( potentialArtworkFileName, str ):
-				print "potentialArtworkFileName est une chaine"
 			
 			if fileName == potentialArtworkFileName:
 				if opts.verbose > 0:
@@ -287,8 +282,7 @@ def artwork(opts, interactive, program, series):
 		(artworkUrl_base, artworkUrl_fileName) = os.path.split(artworkUrl)
 		(artworkUrl_baseFileName, artworkUrl_fileNameExtension)=os.path.splitext(artworkUrl_fileName)
 		
-		artworkFileName = series.seriesName + " Season " + str(series.seasonNumber) + artworkUrl_fileNameExtension
-		
+		artworkFileName = normalize('NFD',series.seriesName).encode("utf8") + " Season " + str(series.seasonNumber) + artworkUrl_fileNameExtension
 		
 		artworkFullFileName = cacheDir + "/" + artworkFileName
 		
@@ -301,8 +295,8 @@ def artwork(opts, interactive, program, series):
 			curlVerbosity ="-v"
 		#end if verbose
 		
-		os.popen("curl %s -o \"%s\" \"%s\"" % (curlVerbosity, artworkFullFileName.encode("utf8"), artworkUrl))
-		
+		os.popen("curl %s -o \"%s\" \"%s\"" % (curlVerbosity, artworkFullFileName, artworkUrl))
+		#urllib.urlretrieve(artworkUrl,artworkFullFileName)
 		
 		series.artworkFileName = artworkFullFileName
 	except tvdb_attributenotfound:
